@@ -26,7 +26,7 @@ fi
 
 # 2. Configura o Nginx temporariamente sem SSL (apenas HTTP) para o desafio ACME
 echo "Ativando configuração HTTP temporária..."
-cp nginx/conf.d/app-nossl.conf nginx/conf.d/default.conf
+cp nginx/conf.d/app-http.conf.template nginx/conf.d/default.conf
 
 # 3. Cria diretórios necessários
 mkdir -p nginx/certbot/conf nginx/certbot/www
@@ -55,7 +55,7 @@ docker compose run --rm certbot certonly \
 
 # 7. Ativa a configuração HTTPS definitiva
 echo "Ativando configuração HTTPS..."
-sed "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/app.conf > nginx/conf.d/default.conf
+sed "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/app-ssl.conf.template > nginx/conf.d/default.conf
 
 # 8. Reinicia o Nginx com SSL
 docker compose restart nginx

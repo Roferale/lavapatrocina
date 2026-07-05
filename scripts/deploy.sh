@@ -46,7 +46,7 @@ mkdir -p nginx/conf.d nginx/certbot/conf nginx/certbot/www
 # Se ainda não tem SSL configurado, usa HTTP simples
 if [ ! -f nginx/conf.d/default.conf ]; then
     echo "Configurando Nginx HTTP (sem SSL ainda)..."
-    cp nginx/conf.d/app-nossl.conf nginx/conf.d/default.conf
+    cp nginx/conf.d/app-http.conf.template nginx/conf.d/default.conf
 fi
 
 # Build e sobe todos os serviços
