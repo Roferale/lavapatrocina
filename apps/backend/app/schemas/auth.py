@@ -6,7 +6,9 @@ from app.models.user import Role
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    # Usamos str (não EmailStr) porque o login apenas busca o usuário no banco.
+    # EmailStr rejeitaria domínios reservados como o padrão admin@lava.local.
+    email: str
     password: str
 
 
