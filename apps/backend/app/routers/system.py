@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -15,7 +15,12 @@ from app.core.deps import get_current_user, require_admin, require_operator
 from app.db.database import get_db
 from app.models.system import AppSetting, SystemLog
 from app.models.user import User
-from app.schemas.system import AppSettingResponse, AppSettingUpdate, SystemLogResponse
+from app.schemas.system import (
+    AppSettingResponse,
+    AppSettingUpdate,
+    PaginatedLogs,
+    SystemLogResponse,
+)
 
 router = APIRouter(prefix="/system", tags=["Sistema"])
 
@@ -24,22 +29,32 @@ router = APIRouter(prefix="/system", tags=["Sistema"])
 # System Logs
 # ---------------------------------------------------------------------------
 
-@router.get("/logs", response_model=list[SystemLogResponse], summary="Listar logs do sistema")
+@router.get("/logs", response_model=PaginatedLogs, summary="Listar logs do sistema")
 async def list_logs(
     level: str | None = Query(default=None, description="Filtrar por nível (DEBUG, INFO, WARNING, ERROR, CRITICAL)"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=100, ge=1, le=1000),
     _: Annotated[User, Depends(require_admin)] = None,
     db: Annotated[AsyncSession, Depends(get_db)] = None,
-) -> list[SystemLogResponse]:
-    """Retorna os logs do sistema com filtro opcional por nível (somente administradores)."""
+) -> PaginatedLogs:
+    """Retorna os logs do sistema no formato paginado {items, total} (somente admins)."""
+    total_query = select(func.count()).select_from(SystemLog)
+    if level is not None:
+        total_query = total_query.where(SystemLog.level == level.upper())
+    total = (await db.execute(total_query)).scalar_one()
+
     query = select(SystemLog).order_by(SystemLog.created_at.desc())
     if level is not None:
         query = query.where(SystemLog.level == level.upper())
     query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     logs = result.scalars().all()
-    return [SystemLogResponse.model_validate(log) for log in logs]
+    return PaginatedLogs(
+        items=[SystemLogResponse.model_validate(log) for log in logs],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 # ---------------------------------------------------------------------------

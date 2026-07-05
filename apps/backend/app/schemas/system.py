@@ -18,6 +18,14 @@ class SystemLogResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PaginatedLogs(BaseModel):
+    """Formato paginado esperado pelo frontend (PaginatedResponse)."""
+    items: list[SystemLogResponse]
+    total: int
+    page: int
+    page_size: int
+
+
 class AppSettingResponse(BaseModel):
     id: UUID
     key: str

@@ -21,6 +21,7 @@ from app.models.user import User
 from app.schemas.event import (
     EventFilter,
     ManualAdjustmentResponse,
+    PaginatedEvents,
     VehicleEventCreate,
     VehicleEventResponse,
     VehicleEventUpdate,
@@ -81,7 +82,7 @@ _EXPORT_HEADERS = [
 # Routes
 # ---------------------------------------------------------------------------
 
-@router.get("/", response_model=list[VehicleEventResponse], summary="Listar eventos")
+@router.get("/", response_model=PaginatedEvents, summary="Listar eventos")
 async def list_events(
     camera_id: str | None = Query(default=None),
     vehicle_type: str | None = Query(default=None),
@@ -93,8 +94,8 @@ async def list_events(
     page_size: int = Query(default=50, ge=1, le=500),
     _: Annotated[User, Depends(get_current_user)] = None,
     db: Annotated[AsyncSession, Depends(get_db)] = None,
-) -> list[VehicleEventResponse]:
-    """Retorna eventos com filtros opcionais, paginado."""
+) -> PaginatedEvents:
+    """Retorna eventos com filtros opcionais, no formato paginado {items, total}."""
     f = EventFilter(
         camera_id=camera_id,
         vehicle_type=vehicle_type,
@@ -105,12 +106,20 @@ async def list_events(
         page=page,
         page_size=page_size,
     )
+    total_query = _apply_filters(select(func.count()).select_from(VehicleEvent), f)
+    total = (await db.execute(total_query)).scalar_one()
+
     query = select(VehicleEvent).order_by(VehicleEvent.event_time.desc())
     query = _apply_filters(query, f)
     query = query.offset((f.page - 1) * f.page_size).limit(f.page_size)
     result = await db.execute(query)
     events = result.scalars().all()
-    return [VehicleEventResponse.model_validate(e) for e in events]
+    return PaginatedEvents(
+        items=[VehicleEventResponse.model_validate(e) for e in events],
+        total=total,
+        page=f.page,
+        page_size=f.page_size,
+    )
 
 
 @router.get("/{event_id}/snapshot", summary="Imagem do evento (autenticado)")

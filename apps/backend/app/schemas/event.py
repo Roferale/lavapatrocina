@@ -69,6 +69,14 @@ class EventFilter(BaseModel):
     page_size: int = 50
 
 
+class PaginatedEvents(BaseModel):
+    """Formato paginado esperado pelo frontend (PaginatedResponse)."""
+    items: list[VehicleEventResponse]
+    total: int
+    page: int
+    page_size: int
+
+
 class DashboardMetrics(BaseModel):
     today_count: int
     week_count: int
