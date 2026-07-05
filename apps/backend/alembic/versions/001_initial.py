@@ -105,7 +105,7 @@ def upgrade() -> None:
         sa.Column("full_name", sa.String(), nullable=True),
         sa.Column(
             "role",
-            sa.Enum("admin", "operator", "readonly", name="userrole"),
+            userrole_enum,
             nullable=False,
             server_default="admin",
         ),
@@ -147,7 +147,7 @@ def upgrade() -> None:
         sa.Column("password_encrypted", sa.String(), nullable=True),
         sa.Column(
             "status",
-            sa.Enum("active", "inactive", name="camerastatus"),
+            camerastatus_enum,
             nullable=False,
             server_default="active",
         ),
@@ -219,7 +219,7 @@ def upgrade() -> None:
         sa.Column("y2_relative", sa.Float(), nullable=False),
         sa.Column(
             "direction",
-            sa.Enum("entry", "exit", "both", name="linedirection"),
+            linedirection_enum,
             nullable=False,
             server_default="both",
         ),
@@ -270,7 +270,7 @@ def upgrade() -> None:
         sa.Column("confidence", sa.Float(), nullable=True),
         sa.Column(
             "direction",
-            sa.Enum("entry", "exit", name="eventdirection"),
+            eventdirection_enum,
             nullable=True,
         ),
         sa.Column("tracker_id", sa.Integer(), nullable=True),
@@ -281,7 +281,7 @@ def upgrade() -> None:
         sa.Column("snapshot_path", sa.String(), nullable=True),
         sa.Column(
             "status",
-            sa.Enum("automatic", "corrected", "removed", name="eventstatus"),
+            eventstatus_enum,
             nullable=False,
             server_default="automatic",
         ),
