@@ -3,20 +3,23 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from app.models.user import Role
 
+# Nota: usamos str (não EmailStr) — EmailStr rejeita domínios reservados como
+# o admin@lava.local padrão, impedindo editar/salvar esse usuário.
+
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: str
     password: str
     full_name: str | None = None
     role: Role = Role.admin
 
 
 class UserUpdate(BaseModel):
-    email: EmailStr | None = None
+    email: str | None = None
     full_name: str | None = None
     role: Role | None = None
     is_active: bool | None = None
