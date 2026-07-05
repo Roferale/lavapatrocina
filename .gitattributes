@@ -1,0 +1,5 @@
+# Força quebra de linha LF em arquivos que rodam no Linux (VPS)
+# Evita o erro "\r: command not found" ao executar scripts .sh
+*.sh    text eol=lf
+Dockerfile text eol=lf
+*.conf  text eol=lf

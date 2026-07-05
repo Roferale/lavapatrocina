@@ -1,0 +1,114 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lava_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lava}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lava_password}
+      POSTGRES_DB: ${POSTGRES_DB:-lavadb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Porta não exposta publicamente — apenas acessível internamente pela rede Docker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lava} -d ${POSTGRES_DB:-lavadb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: lava_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lava}:${POSTGRES_PASSWORD:-lava_password}@postgres:5432/${POSTGRES_DB:-lavadb}
+      SECRET_KEY: ${SECRET_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SNAPSHOTS_DIR: /app/snapshots
+      WORKER_STATUS_FILE: /tmp/worker_status.json
+      LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-30}
+      SNAPSHOT_RETENTION_DAYS: ${SNAPSHOT_RETENTION_DAYS:-7}
+    volumes:
+      - snapshots_data:/app/snapshots
+      - worker_status:/tmp
+    # Porta NÃO exposta ao host — Nginx acessa via rede interna
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build:
+      context: ./apps/worker
+      dockerfile: Dockerfile
+    container_name: lava_worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lava}:${POSTGRES_PASSWORD:-lava_password}@postgres:5432/${POSTGRES_DB:-lavadb}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      YOLO_MODEL: ${YOLO_MODEL:-yolo11n.pt}
+      SNAPSHOTS_DIR: /app/snapshots
+      WORKER_STATUS_FILE: /tmp/worker_status.json
+      RECONNECT_INTERVAL: ${RECONNECT_INTERVAL:-30}
+      SAVE_SNAPSHOTS: ${SAVE_SNAPSHOTS:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - snapshots_data:/app/snapshots
+      - worker_status:/tmp
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://${DOMAIN:-localhost}/api/v1}
+    container_name: lava_frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:8000
+    # Porta NÃO exposta ao host — Nginx acessa via rede interna
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: lava_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certbot/conf:/etc/letsencrypt:ro
+      - ./nginx/certbot/www:/var/www/certbot:ro
+      - snapshots_data:/app/snapshots:ro
+    depends_on:
+      - backend
+      - frontend
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  certbot:
+    image: certbot/certbot
+    container_name: lava_certbot
+    restart: unless-stopped
+    volumes:
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    # Renova certificados a cada 12h se necessário
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  postgres_data:
+  snapshots_data:
+  worker_status:

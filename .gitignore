@@ -1,0 +1,34 @@
+# Segredos — NUNCA subir
+.env
+*.env.local
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Modelos YOLO baixados (pesados; baixados no build)
+*.pt
+!yolo11n.pt.keep
+
+# Dados em runtime
+snapshots/
+backups/
+nginx/certbot/
+nginx/conf.d/default.conf
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
