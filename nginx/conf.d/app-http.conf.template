@@ -1,8 +1,19 @@
 # Configuração HTTP pura — usada ANTES de obter o certificado SSL
 # Após rodar o scripts/ssl-init.sh, este arquivo é substituído por app.conf
+
+# Limite de tentativas de login por IP (proteção contra força bruta)
+limit_req_zone $binary_remote_addr zone=login_limit:10m rate=10r/m;
+
 server {
     listen 80;
     server_name _;
+
+    # Cabeçalhos de segurança
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    client_max_body_size 20M;
 
     # Desafio Let's Encrypt
     location /.well-known/acme-challenge/ {
@@ -21,6 +32,16 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
+    # Login com rate limit (mais específico que /api/, tem precedência)
+    location = /api/v1/auth/login {
+        limit_req zone=login_limit burst=5 nodelay;
+        proxy_pass         http://backend:8000/api/v1/auth/login;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
     # Backend API
     location /api/ {
         proxy_pass         http://backend:8000/api/;
@@ -30,9 +51,6 @@ server {
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
-    # Snapshots
-    location /snapshots/ {
-        alias /app/snapshots/;
-        expires 7d;
-    }
+    # Snapshots: sem acesso público — imagens de veículos são servidas apenas
+    # pelo endpoint autenticado /api/v1/events/{id}/snapshot
 }

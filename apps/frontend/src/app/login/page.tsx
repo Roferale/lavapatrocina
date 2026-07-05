@@ -64,7 +64,6 @@ export default function LoginPage() {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
-        <p className="text-xs text-gray-400 text-center mt-4">Padrão: admin@lava.local / admin123</p>
       </div>
     </div>
   )

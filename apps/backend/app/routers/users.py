@@ -136,10 +136,16 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Desativar usuário")
 async def delete_user(
     user_id: str,
-    _: Annotated[User, Depends(require_admin)],
+    current_user: Annotated[User, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     """Desativa um usuário (soft delete — somente administradores)."""
+    if str(current_user.id) == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Você não pode desativar a própria conta.",
+        )
+
     result = await db.execute(select(User).where(User.id == user_id))
     user: User | None = result.scalar_one_or_none()
     if user is None:

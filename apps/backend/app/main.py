@@ -6,7 +6,6 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.db.init_db import init_db
@@ -28,15 +27,18 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# CORS — allow all origins for local / intranet use
+# CORS — o frontend é servido same-origin pelo Nginx, então por padrão nenhuma
+# origem externa é permitida. Origens extras entram via CORS_ORIGINS no .env.
 # ---------------------------------------------------------------------------
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+_cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # ---------------------------------------------------------------------------
 # Routers
@@ -51,14 +53,10 @@ app.include_router(dashboard.router, prefix=API_PREFIX)
 app.include_router(system.router, prefix=API_PREFIX)
 
 # ---------------------------------------------------------------------------
-# Static files — snapshots
+# Snapshots — servidos apenas via endpoint autenticado em /api/v1/events/
+# (imagens de veículos são dados pessoais; sem acesso público direto).
 # ---------------------------------------------------------------------------
 os.makedirs(settings.SNAPSHOTS_DIR, exist_ok=True)
-app.mount(
-    "/snapshots",
-    StaticFiles(directory=settings.SNAPSHOTS_DIR),
-    name="snapshots",
-)
 
 # ---------------------------------------------------------------------------
 # Health check

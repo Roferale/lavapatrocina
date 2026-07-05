@@ -28,6 +28,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-lava}:${POSTGRES_PASSWORD:-lava_password}@postgres:5432/${POSTGRES_DB:-lavadb}
       SECRET_KEY: ${SECRET_KEY}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
       SNAPSHOTS_DIR: /app/snapshots
       WORKER_STATUS_FILE: /tmp/worker_status.json
       LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-30}
@@ -92,7 +93,6 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/certbot/conf:/etc/letsencrypt:ro
       - ./nginx/certbot/www:/var/www/certbot:ro
-      - snapshots_data:/app/snapshots:ro
     depends_on:
       - backend
       - frontend

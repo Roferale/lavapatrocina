@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import csv
 import io
+import os
 import uuid
 from datetime import datetime, timezone
 from typing import Annotated
 
 import openpyxl
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.deps import get_current_user, require_operator
 from app.db.database import get_db
 from app.models.event import EventDirection, EventStatus, ManualAdjustment, VehicleEvent
@@ -109,6 +111,29 @@ async def list_events(
     result = await db.execute(query)
     events = result.scalars().all()
     return [VehicleEventResponse.model_validate(e) for e in events]
+
+
+@router.get("/{event_id}/snapshot", summary="Imagem do evento (autenticado)")
+async def get_event_snapshot(
+    event_id: str,
+    _: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> FileResponse:
+    """Serve a imagem do evento apenas para usuários autenticados."""
+    result = await db.execute(select(VehicleEvent).where(VehicleEvent.id == event_id))
+    event: VehicleEvent | None = result.scalar_one_or_none()
+    if event is None or not event.snapshot_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Snapshot não encontrado.")
+
+    # Resolve o caminho e garante que fica dentro de SNAPSHOTS_DIR (anti path-traversal)
+    base = os.path.realpath(settings.SNAPSHOTS_DIR)
+    raw = event.snapshot_path
+    candidate = raw if os.path.isabs(raw) else os.path.join(base, raw)
+    resolved = os.path.realpath(candidate)
+    if not resolved.startswith(base + os.sep) or not os.path.isfile(resolved):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Snapshot não encontrado.")
+
+    return FileResponse(resolved, media_type="image/jpeg")
 
 
 @router.post(
