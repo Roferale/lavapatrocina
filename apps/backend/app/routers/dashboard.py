@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -66,17 +66,20 @@ async def get_metrics(
 
     # ---- Daily counts for the last 7 days ----
     seven_days_ago = today_start - timedelta(days=6)
+    # 'day' como literal (text) para não virar parâmetro — assim o SELECT e o
+    # GROUP BY geram a mesma expressão e o PostgreSQL aceita o agrupamento.
+    day_expr = func.date_trunc(text("'day'"), VehicleEvent.event_time)
     daily_result = await db.execute(
         select(
-            func.date_trunc("day", VehicleEvent.event_time).label("day"),
+            day_expr.label("day"),
             func.count().label("count"),
         )
         .where(
             VehicleEvent.event_time >= seven_days_ago,
             VehicleEvent.status.in_(active_statuses),
         )
-        .group_by(func.date_trunc("day", VehicleEvent.event_time))
-        .order_by(func.date_trunc("day", VehicleEvent.event_time))
+        .group_by(day_expr)
+        .order_by(day_expr)
     )
     daily_map: dict[str, int] = {}
     for row in daily_result:
