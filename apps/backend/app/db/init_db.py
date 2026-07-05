@@ -121,10 +121,8 @@ async def _seed_settings(session: AsyncSession) -> None:
 # ---------------------------------------------------------------------------
 
 async def init_db() -> None:
-    # Ensure tables exist (idempotent; Alembic should manage this in prod)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
+    # O schema é gerenciado pelo Alembic (rodado antes via `alembic upgrade head`).
+    # Aqui apenas semeamos os dados iniciais (admin + configurações).
     async with AsyncSessionLocal() as session:
         async with session.begin():
             await _seed_admin(session)
