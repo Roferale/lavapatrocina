@@ -29,7 +29,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white rounded-lg shadow-md p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">🚗 LavaJato</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">🚗 LAVA PATROCINA</h1>
         <p className="text-gray-500 text-center mb-6 text-sm">Sistema de Contagem de Veículos</p>
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">{error}</div>

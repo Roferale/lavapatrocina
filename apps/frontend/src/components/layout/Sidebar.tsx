@@ -28,7 +28,7 @@ export default function Sidebar() {
   return (
     <aside className="w-56 min-h-screen bg-gray-900 text-white flex flex-col">
       <div className="px-4 py-5 border-b border-gray-700">
-        <h1 className="text-lg font-bold">🚗 LavaJato</h1>
+        <h1 className="text-lg font-bold">🚗 LAVA PATROCINA</h1>
         <p className="text-xs text-gray-400 mt-0.5">Contagem de Veículos</p>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">

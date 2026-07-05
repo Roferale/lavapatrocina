@@ -37,7 +37,17 @@ async function request<T>(
 
   if (!res.ok) {
     let msg = `Erro ${res.status}`
-    try { const d = await res.json(); msg = d.detail || msg } catch { /* ignore */ }
+    try {
+      const d = await res.json()
+      if (typeof d.detail === 'string') {
+        msg = d.detail
+      } else if (Array.isArray(d.detail)) {
+        // Erros de validação do FastAPI vêm como lista de objetos
+        msg = d.detail.map((e: { msg?: string }) => e.msg).filter(Boolean).join('; ') || msg
+      } else if (d.detail) {
+        msg = JSON.stringify(d.detail)
+      }
+    } catch { /* ignore */ }
     throw new Error(msg)
   }
 

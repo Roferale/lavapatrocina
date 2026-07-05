@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'LavaJato - Contagem de Veículos',
+  title: 'LAVA PATROCINA - Contagem de Veículos',
   description: 'Sistema de contagem automática de veículos',
 }
 
