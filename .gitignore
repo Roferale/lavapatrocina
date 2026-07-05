@@ -28,6 +28,11 @@ backups/
 nginx/certbot/
 nginx/conf.d/default.conf
 
+# Vídeos de teste (não publicar filmagens no repo público)
+*.mp4
+*.webm
+sim/
+
 # Sistema
 .DS_Store
 Thumbs.db

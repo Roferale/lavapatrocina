@@ -1,0 +1,42 @@
+# =============================================================================
+# Simulador de câmera RTSP — para testar o sistema sem câmera real.
+# Roda o vídeo sim/lava.mp4 em loop infinito como se fosse uma câmera ao vivo.
+#
+# Preparação (uma vez):
+#   1. Envie o vídeo para a VPS:        sim/teste.mp4
+#   2. Converta para H.264 (leve p/ loop):
+#      docker run --rm -v /root/lavapatrocina/sim:/v linuxserver/ffmpeg:latest \
+#        -i /v/teste.mp4 -c:v libx264 -preset veryfast -crf 23 \
+#        -vf scale=1280:-2 -an /v/lava.mp4
+#
+# Subir:    docker compose -f docker-compose.sim.yml up -d
+# Parar:    docker compose -f docker-compose.sim.yml down
+#
+# No painel, cadastre a câmera com a URL (sem usuário/senha):
+#   rtsp://sim_camera:8554/lava
+# =============================================================================
+services:
+  sim_camera:
+    image: bluenviron/mediamtx:latest
+    container_name: sim_camera
+    restart: unless-stopped
+
+  sim_publisher:
+    image: linuxserver/ffmpeg:latest
+    container_name: sim_publisher
+    restart: unless-stopped
+    volumes:
+      - ./sim:/video:ro
+    command: >
+      -re -stream_loop -1 -i /video/lava.mp4
+      -c copy -an -f rtsp -rtsp_transport tcp
+      rtsp://sim_camera:8554/lava
+    depends_on:
+      - sim_camera
+
+# Usa a mesma rede do sistema principal para que worker/backend
+# resolvam o host "sim_camera"
+networks:
+  default:
+    name: lavapatrocina_default
+    external: true
