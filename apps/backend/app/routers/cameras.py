@@ -55,8 +55,8 @@ def _test_rtsp_sync(url: str) -> tuple[bool, str, bool]:
     return True, "Conexão bem-sucedida e quadro lido com êxito.", True
 
 
-def _capture_frame_sync(url: str) -> bytes | None:
-    """Capture a single frame and return it as a JPEG byte string (or None)."""
+def _capture_frame_sync(url: str) -> tuple[bytes, int, int] | None:
+    """Capture a single frame; return (JPEG bytes, width, height) or None."""
     cap = cv2.VideoCapture(url)
     if not cap.isOpened():
         return None
@@ -64,8 +64,9 @@ def _capture_frame_sync(url: str) -> bytes | None:
     cap.release()
     if not ret:
         return None
+    height, width = frame.shape[:2]
     _, buf = cv2.imencode(".jpg", frame)
-    return buf.tobytes()
+    return buf.tobytes(), width, height
 
 
 # ---------------------------------------------------------------------------
@@ -222,16 +223,24 @@ async def get_camera_frame(
         )
 
     loop = asyncio.get_event_loop()
-    frame_bytes = await loop.run_in_executor(None, _capture_frame_sync, url)
+    captured = await loop.run_in_executor(None, _capture_frame_sync, url)
 
-    if frame_bytes is None:
+    if captured is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Não foi possível capturar quadro da câmera.",
         )
 
+    frame_bytes, width, height = captured
     encoded = base64.b64encode(frame_bytes).decode("utf-8")
-    return {"camera_id": camera_id, "frame_base64": encoded, "content_type": "image/jpeg"}
+    # Campos no formato que o frontend consome (image_base64, width, height)
+    return {
+        "camera_id": camera_id,
+        "image_base64": encoded,
+        "width": width,
+        "height": height,
+        "content_type": "image/jpeg",
+    }
 
 
 @router.get(
