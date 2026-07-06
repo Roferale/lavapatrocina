@@ -20,6 +20,11 @@ services:
     image: bluenviron/mediamtx:latest
     container_name: sim_camera
     restart: unless-stopped
+    # Porta exposta para receber stream externo (ex.: captura da janela do VMS
+    # enviada do PC de desenvolvimento). Feche no firewall quando não estiver
+    # em uso: ufw delete allow 8554/tcp
+    ports:
+      - "8554:8554"
 
   sim_publisher:
     image: linuxserver/ffmpeg:latest
