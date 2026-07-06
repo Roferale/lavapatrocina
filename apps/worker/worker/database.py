@@ -225,7 +225,7 @@ async def save_vehicle_event(event_data: dict) -> None:
             created_at, updated_at
         ) VALUES (
             :id, :camera_id, :event_time, :vehicle_type, :confidence,
-            :direction::eventdirection, :tracker_id,
+            CAST(:direction AS eventdirection), :tracker_id,
             :bbox_x1, :bbox_y1, :bbox_x2, :bbox_y2,
             :snapshot_path, 'automatic',
             now(), now()
@@ -279,7 +279,7 @@ async def save_system_log(
     sql = text(
         """
         INSERT INTO system_logs (id, level, source, message, details, created_at)
-        VALUES (:id, :level, :source, :message, :details::jsonb, now())
+        VALUES (:id, :level, :source, :message, CAST(:details AS jsonb), now())
         """
     )
     import json
